@@ -31,12 +31,20 @@ header{height:64px;background:#fff;box-shadow:0 1px 5px #0003;position:sticky;to
 </main>
 <nav class="mobile"><button class="active" data-view="home">⌂</button><button data-view="markets">▥</button><button id="mobileCompose">＋</button><button data-view="communities">♚</button><button data-view="profile">☻</button></nav>
 <div class="modal hidden" id="postModal"><div class="dialog"><div class="dialog-head"><h2>Share a mistake</h2><button class="close" data-close>×</button></div><div class="dialog-body"><div class="identity"><div class="avatar">RS</div><b>Rob Stuck</b></div><textarea id="postText" class="textarea" placeholder="Tell everyone how you bought the top..."></textarea><input id="postAsset" class="asset-input" placeholder="Asset you cursed, e.g. BTC"><button class="primary full" id="publish" style="margin-top:12px">Post the damage</button></div></div></div>
-<div class="modal hidden" id="authModal"><div class="dialog"><div class="dialog-head"><h2>Unlock Stuckers</h2><button class="close" data-close>×</button></div><div class="dialog-body"><img class="auth-logo" src="stuckers-logo.png" alt="Stuckers"><div class="auth-copy"><h2>Join the losing side</h2><p>Connect your X account to unlock members-only posts and create your Stuckers profile.</p></div><button class="xbtn" id="connectX">𝕏 &nbsp; Continue with X</button><div id="xForm" class="hidden"><div class="field"><label>Name from X</label><input id="xName" value="Rob Stuck"></div><div class="field"><label>X username</label><input id="xHandle" value="@rob_stuck"></div><button class="primary full" id="finishX">Create Stuckers profile</button></div><small style="display:block;text-align:center;margin-top:12px">Demo connection. Live X OAuth will require the production X developer credentials.</small></div></div></div>
+<div class="modal hidden" id="authModal"><div class="dialog"><div class="dialog-head"><h2>Unlock Stuckers</h2><button class="close" data-close>×</button></div><div class="dialog-body"><img class="auth-logo" src="stuckers-logo.png" alt="Stuckers"><div class="auth-copy"><h2>Join the losing side</h2><p>Connect your X account to unlock members-only posts and create your Stuckers profile.</p></div><button class="xbtn" id="connectX">𝕏 &nbsp; Continue with X</button><small style="display:block;text-align:center;margin-top:12px">Secure X authentication powered by Privy.</small></div></div></div>
 <div class="modal hidden" id="profileModal"><div class="dialog"><div class="dialog-head"><h2>Edit loser profile</h2><button class="close" data-close>×</button></div><div class="dialog-body"><div class="field"><label>Display name</label><input id="editName" value="Rob Stuck"></div><div class="field"><label>Failure bio</label><input id="editBio" value="Professional top buyer. Exit liquidity since 2021."></div><button class="primary full" id="saveProfile">Save embarrassment</button></div></div></div><div class="toast hidden" id="toast"></div>
-<script>
+<script type="module">
+import Privy, { LocalStorage } from "https://cdn.jsdelivr.net/npm/@privy-io/js-sdk-core@0.73.0/+esm";
+
+const PRIVY_APP_ID = "cmtqwatym00320cl7mra53694";
+const PRIVY_CLIENT_ID = "client-WY6d7cpuFVnNLzviJ28g78SNJy29tAVUbxeHbqnTVX1GD";
+const PRIVY_REDIRECT_URI = window.location.origin + window.location.pathname;
+const privy = new Privy({ appId: PRIVY_APP_ID, clientId: PRIVY_CLIENT_ID, storage: new LocalStorage() });
+
 const assets=[{s:'BTC',n:'Bitcoin',p:'$56,240',c:'−18.42%'},{s:'ETH',n:'Ethereum',p:'$2,385',c:'−24.18%'},{s:'SOL',n:'Solana',p:'$142.80',c:'−31.74%'},{s:'NVDA',n:'Nvidia',p:'$168.32',c:'−12.07%'}];
 const seed=[{id:1,name:'Chad Bagholder',initial:'CB',sub:'18m · Public',text:'Bought $BTC because the candle was green. It turned red before the order confirmation loaded. Still holding because selling would make it real.',asset:'BTC',damage:'−$4,281',change:'−38.42%',likes:128,comments:34,liked:false,color:'dark'},{id:2,name:'Wendy Exit Liquidity',initial:'WE',sub:'42m · Public',text:'Just sold $NVDA at the bottom. You are all welcome for the recovery that starts now.',asset:'NVDA',damage:'−$1,908',change:'−51.08%',likes:76,comments:51,liked:false,color:'green'},{id:3,name:'Diamond Hands Dave',initial:'DD',sub:'1h · Bagholders Anonymous',text:'My thesis is unchanged because I no longer remember what it was. Down 73%, averaging down with grocery money.',asset:'SOL',damage:'−$8,042',change:'−73.91%',likes:203,comments:67,liked:false,color:''}];
-let posts=JSON.parse(localStorage.getItem('stuckers_posts')||'null')||seed;const baseMembers=[{name:'Wendy Exit Liquidity',handle:'@wendyrekt',initial:'WE',color:'green'},{name:'Chad Bagholder',handle:'@never_selling',initial:'CB',color:'dark'},{name:'Diamond Hands Dave',handle:'@downonlydave',initial:'DD',color:''}];let account=JSON.parse(localStorage.getItem('stuckers_x_account')||'null');const $=s=>document.querySelector(s),$$=s=>document.querySelectorAll(s);
+let posts=JSON.parse(localStorage.getItem('stuckers_posts')||'null')||seed;const baseMembers=[{name:'Wendy Exit Liquidity',handle:'@wendyrekt',initial:'WE',color:'green'},{name:'Chad Bagholder',handle:'@never_selling',initial:'CB',color:'dark'},{name:'Diamond Hands Dave',handle:'@downonlydave',initial:'DD',color:''}];let account=JSON.parse(localStorage.getItem('stuckers_x_account')||'null');
+let privyUser=null;const $=s=>document.querySelector(s),$$=s=>document.querySelectorAll(s);
 function postHTML(p){return `<article class="card post"><div class="post-head"><div class="avatar ${p.color||''}">${p.initial}</div><div class="post-meta"><div class="post-name">${p.name}</div><div class="post-sub">${p.sub}</div></div><button class="dots">···</button></div><div class="post-body"><p>${p.text.replace(/\$([A-Z]+)/g,'<span class="cash">\$$1</span>')}</p></div><div class="damage"><div><div class="asset">$${p.asset||'REGRET'}</div><span class="sentiment">▼ CERTIFIED BAD IDEA</span></div><div class="quote loss">${p.damage||'Instant regret'}<br><small class="loss">${p.change||'−100% confidence'}</small></div><svg class="chart" viewBox="0 0 440 48" preserveAspectRatio="none"><polyline points="0,7 45,13 90,9 135,21 180,17 225,31 270,26 315,39 360,35 405,45 440,43"/></svg></div><div class="stats"><span>😂 ${p.likes}</span><span>${p.comments} condolences · ${Math.max(3,Math.floor(p.likes/5))} shares</span></div><div class="post-actions"><button class="${p.liked?'liked':''}" data-like="${p.id}">😂 Relatable</button><button data-comment="${p.id}">◯ Condolences</button><button data-share="${p.id}">↗ Spread pain</button></div></article>`}
 function render(){ $('#watchlist').innerHTML=assets.map(a=>`<div class="ticker"><div><b>$${a.s}</b><br><small>${a.n}</small></div><div class="p">${a.p}<br><small class="loss">${a.c}</small></div></div>`).join('');$('#feed').innerHTML=posts.filter(p=>!$('#search').value||`${p.name} ${p.text} ${p.asset}`.toLowerCase().includes($('#search').value.toLowerCase())).map(postHTML).join('')||'<div class="card empty">No losses found. Miraculous.</div>';renderViews()}
 function renderViews(){const all=assets.concat([{s:'AAPL',n:'Apple',p:'$239.69',c:'−9.82%'},{s:'TSLA',n:'Tesla',p:'$346.40',c:'−22.15%'}]);$('#marketList').innerHTML=all.map(a=>`<div class="row"><span class="asset-logo">${a.s[0]}</span><div><b>$${a.s}</b><br><small>${a.n} · trending for the wrong reason</small></div><div class="value">${a.p}<br><small class="loss">${a.c}</small></div><button class="outline" data-watch-add="${a.s}">Bookmark</button></div>`).join('');$('#watchPage').innerHTML=assets.map(a=>`<div class="row"><span class="asset-logo">★</span><div><b>$${a.s}</b><br><small>${a.n}</small></div><div class="value">${a.p}<br><small class="loss">${a.c}</small></div><button class="outline" data-remove="${a.s}">Remove</button></div>`).join('');const groups=[['₿','Bitcoin Top Buyers','18.4K losers'],['S','Solana Recovery Group','8.2K losers'],['N','Tech Bags Support Club','24.7K losers'],['M','Memecoin Victims','12.1K losers']];$('#communityList').innerHTML=groups.map(g=>`<div class="row community"><span class="asset-logo">${g[0]}</span><div><b>${g[1]}</b><br><small>${g[2]} · pain is active</small></div><button class="outline" data-join>Join losers</button></div>`).join('');const members=account?[{name:account.name,handle:account.handle,initial:account.initial,color:'green'},...baseMembers]:baseMembers;$('#members').innerHTML=members.map(m=>`<div class="member"><span class="avatar sm ${m.color}">${m.initial}</span><div class="member-info"><b>${m.name}${account&&m.handle===account.handle?' <span class="verified">✓</span>':''}</b><small>${m.handle}</small></div></div>`).join('');$('#suggested').innerHTML=baseMembers.slice(0,3).map(m=>`<div class="member"><span class="avatar sm ${m.color}">${m.initial}</span><div class="member-info"><b>${m.name}</b><small>${m.handle}</small></div><button class="follow" data-follow>Follow</button></div>`).join('');const display=account?account.name:'Rob Stuck',mine=posts.filter(p=>p.name===display);$('#profilePosts').innerHTML=mine.length?mine.map(postHTML).join(''):'<div class="card empty"><b>No posts yet.</b><br>Your public mistakes will appear here.</div>';$('#accountMini').innerHTML=account?`<button data-view="profile" style="width:100%"><span class="avatar sm green">${account.initial}</span><span><b>${account.name}</b><br><small>${account.handle}</small></span></button>`:`<button data-auth style="width:100%"><span class="mi">𝕏</span> Connect X account</button>`}
@@ -44,6 +52,79 @@ function open(id){$(id).classList.remove('hidden');document.body.style.overflow=
 $$('[data-close]').forEach(b=>b.onclick=close);$$('.modal').forEach(m=>m.onclick=e=>{if(e.target===m)close()});document.addEventListener('click',e=>{const v=e.target.closest('[data-view]'),auth=e.target.closest('[data-auth]');if(v)show(v.dataset.view);if(auth)open('#authModal')});$('#compose').onclick=$('#badTrade').onclick=$('#story').onclick=$('#mobileCompose').onclick=$('#mailBtn').onclick=()=>account?open('#postModal'):open('#authModal');$('#screenshot').onclick=()=>toast('Media upload is coming soon.');$('#poll').onclick=()=>toast('Poll added to your next post.');$('#messages').onclick=()=>toast('Messages unlock after connecting X.');$('#alerts').onclick=$('#leftAlerts').onclick=()=>toast('No new notifications. A rare win.');$('#accountBtn').onclick=()=>account?show('profile'):open('#authModal');$('#unlockBtn').onclick=()=>open('#authModal');$('#search').oninput=render;
 $('#publish').onclick=()=>{if(!account)return open('#authModal');const text=$('#postText').value.trim(),asset=$('#postAsset').value.trim().toUpperCase().replace('$','');if(!text)return toast('Confess a mistake first.');posts.unshift({id:Date.now(),name:account.name,initial:account.initial,sub:'Just now · Public',text,asset:asset||'REGRET',damage:'Fresh damage',change:'Still dropping',likes:0,comments:0,liked:false,color:'green'});localStorage.setItem('stuckers_posts',JSON.stringify(posts));$('#postText').value='';$('#postAsset').value='';close();render();toast('Your mistake is now public.')};
 $('#feed').onclick=e=>{const l=e.target.closest('[data-like]'),c=e.target.closest('[data-comment]'),s=e.target.closest('[data-share]');if(l){const p=posts.find(x=>x.id==l.dataset.like);p.liked=!p.liked;p.likes+=p.liked?1:-1;localStorage.setItem('stuckers_posts',JSON.stringify(posts));render()}if(c){const msg=prompt('Leave your condolences:');if(msg){const p=posts.find(x=>x.id==c.dataset.comment);p.comments++;localStorage.setItem('stuckers_posts',JSON.stringify(posts));render();toast('Condolences delivered.')}}if(s)toast('Pain successfully spread.')};
-$('#connectX').onclick=()=>{$('#connectX').classList.add('hidden');$('#xForm').classList.remove('hidden');$('#xName').focus()};$('#finishX').onclick=()=>{const name=$('#xName').value.trim(),handle=$('#xHandle').value.trim().replace(/^@?/,'@');if(!name||handle.length<2)return toast('Enter your X name and username.');account={name,handle,initial:name.split(/\s+/).map(x=>x[0]).join('').slice(0,2).toUpperCase()};localStorage.setItem('stuckers_x_account',JSON.stringify(account));$('#profileName').textContent=name;$('#profileHandle').textContent=handle;$('#profileAvatar').textContent=account.initial;$('#lockedCard').innerHTML='<h4>🔓 STUCKERS Community</h4><p><b>Unlocked:</b> I bought the dip, but the dip had a basement. Members can now reply and share this post.</p>';close();render();show('profile');toast('Connected with X. Welcome to Stuckers!')};
-$('#editProfile').onclick=()=>{if(account){$('#editName').value=account.name}open('#profileModal')};$('#saveProfile').onclick=()=>{const n=$('#editName').value.trim(),bio=$('#editBio').value.trim();if(!n)return toast('Even losers need a name.');if(account){account.name=n;account.initial=n.split(/\s+/).map(x=>x[0]).join('').slice(0,2).toUpperCase();localStorage.setItem('stuckers_x_account',JSON.stringify(account));$('#profileAvatar').textContent=account.initial}$('#profileName').textContent=n;$('#profileBio').textContent=bio;localStorage.setItem('stuckers_profile',JSON.stringify({n,b:bio}));close();render();toast('Profile updated.')};const profile=JSON.parse(localStorage.getItem('stuckers_profile')||'null');if(account){$('#profileName').textContent=account.name;$('#profileHandle').textContent=account.handle;$('#profileAvatar').textContent=account.initial;$('#editName').value=account.name;$('#lockedCard').innerHTML='<h4>🔓 STUCKERS Community</h4><p><b>Unlocked:</b> I bought the dip, but the dip had a basement. Members can now reply and share this post.</p>'}if(profile){$('#profileBio').textContent=profile.b;$('#editBio').value=profile.b}$('#addAsset').onclick=()=>{const x=prompt('Which asset should we doom next?');if(x)toast(`$${x.toUpperCase()} added. Sorry in advance.`)};document.addEventListener('click',e=>{const j=e.target.closest('[data-join]'),r=e.target.closest('[data-remove]'),f=e.target.closest('[data-follow]'),w=e.target.closest('[data-watch-add]');if(j){j.textContent=j.textContent==='Leave group'?'Join losers':'Leave group';toast(j.textContent==='Leave group'?'Welcome to the support group.':'You escaped.')}if(r){r.closest('.row').remove();toast(`$${r.dataset.remove} escaped your watchlist.`)}if(f){f.textContent=f.textContent==='Following'?'Follow':'Following'}if(w)toast(`$${w.dataset.watchAdd} bookmarked.`)});render();
+async function applyPrivyUser(user){
+  privyUser=user;
+  const twitter=user?.linked_accounts?.find(a=>a.type==='twitter_oauth') || user?.linkedAccounts?.find(a=>a.type==='twitter_oauth');
+  if(!twitter) return false;
+  const name=twitter.name || twitter.username || 'Stucker';
+  const handle=twitter.username ? '@'+String(twitter.username).replace(/^@/,'') : '@stucker';
+  account={name,handle,initial:name.split(/\s+/).map(x=>x[0]).join('').slice(0,2).toUpperCase(),profilePicture:twitter.profile_picture_url||twitter.profilePictureUrl||''};
+  localStorage.setItem('stuckers_x_account',JSON.stringify(account));
+  $('#profileName').textContent=name;
+  $('#profileHandle').textContent=handle;
+  $('#profileAvatar').textContent=account.initial;
+  $('#lockedCard').innerHTML='<h4>🔓 STUCKERS Community</h4><p><b>Unlocked:</b> Your X account is connected. Members can now reply and share this post.</p>';
+  close();
+  render();
+  return true;
+}
+
+async function startXLogin(){
+  try{
+    $('#connectX').disabled=true;
+    $('#connectX').textContent='Connecting to X…';
+    const result=await privy.auth.oauth.generateURL('twitter',PRIVY_REDIRECT_URI);
+    const url=result?.url || result?.authorization_url || result?.oauth_url;
+    const state=result?.state || result?.state_code;
+    if(state) sessionStorage.setItem('stuckers_privy_oauth_state',state);
+    if(!url) throw new Error('Privy did not return an OAuth URL.');
+    window.location.assign(url);
+  }catch(err){
+    console.error(err);
+    $('#connectX').disabled=false;
+    $('#connectX').textContent='𝕏  Continue with X';
+    toast('Could not start X login. Check Privy Login Methods and Allowed Origins.');
+  }
+}
+
+async function finishXCallback(){
+  const params=new URLSearchParams(window.location.search);
+  const code=params.get('code') || params.get('authorization_code') || params.get('privy_oauth_code');
+  const state=params.get('state') || params.get('state_code') || params.get('privy_oauth_state');
+  if(!code || !state) return false;
+  try{
+    const savedState=sessionStorage.getItem('stuckers_privy_oauth_state');
+    if(savedState && savedState!==state) throw new Error('OAuth state mismatch.');
+    const session=await privy.auth.oauth.loginWithCode(code,state,'twitter');
+    window.history.replaceState({},document.title,PRIVY_REDIRECT_URI);
+    sessionStorage.removeItem('stuckers_privy_oauth_state');
+    const ok=await applyPrivyUser(session?.user || session);
+    if(!ok) throw new Error('X account was not returned by Privy.');
+    toast('Connected with X. Welcome to Stuckers!');
+    return true;
+  }catch(err){
+    console.error(err);
+    window.history.replaceState({},document.title,PRIVY_REDIRECT_URI);
+    toast('X login could not be completed. Check your Privy X settings.');
+    return false;
+  }
+}
+
+$('#connectX').onclick=startXLogin;
+
+$('#editProfile').onclick=()=>{if(account){$('#editName').value=account.name}open('#profileModal')};$('#saveProfile').onclick=()=>{const n=$('#editName').value.trim(),bio=$('#editBio').value.trim();if(!n)return toast('Even losers need a name.');if(account){account.name=n;account.initial=n.split(/\s+/).map(x=>x[0]).join('').slice(0,2).toUpperCase();localStorage.setItem('stuckers_x_account',JSON.stringify(account));$('#profileAvatar').textContent=account.initial}$('#profileName').textContent=n;$('#profileBio').textContent=bio;localStorage.setItem('stuckers_profile',JSON.stringify({n,b:bio}));close();render();toast('Profile updated.')};const profile=JSON.parse(localStorage.getItem('stuckers_profile')||'null');if(account){$('#profileName').textContent=account.name;$('#profileHandle').textContent=account.handle;$('#profileAvatar').textContent=account.initial;$('#editName').value=account.name;$('#lockedCard').innerHTML='<h4>🔓 STUCKERS Community</h4><p><b>Unlocked:</b> I bought the dip, but the dip had a basement. Members can now reply and share this post.</p>'}if(profile){$('#profileBio').textContent=profile.b;$('#editBio').value=profile.b}$('#addAsset').onclick=()=>{const x=prompt('Which asset should we doom next?');if(x)toast(`$${x.toUpperCase()} added. Sorry in advance.`)};document.addEventListener('click',e=>{const j=e.target.closest('[data-join]'),r=e.target.closest('[data-remove]'),f=e.target.closest('[data-follow]'),w=e.target.closest('[data-watch-add]');if(j){j.textContent=j.textContent==='Leave group'?'Join losers':'Leave group';toast(j.textContent==='Leave group'?'Welcome to the support group.':'You escaped.')}if(r){r.closest('.row').remove();toast(`$${r.dataset.remove} escaped your watchlist.`)}if(f){f.textContent=f.textContent==='Following'?'Follow':'Following'}if(w)toast(`$${w.dataset.watchAdd} bookmarked.`)});
+
+(async()=>{
+  render();
+  try{
+    await privy.initialize();
+    const callbackHandled=await finishXCallback();
+    if(!callbackHandled){
+      const existing=await privy.user.get();
+      if(existing?.user) await applyPrivyUser(existing.user);
+    }
+  }catch(err){
+    console.error('Privy initialization failed:',err);
+  }
+})();
 </script></body></html>
