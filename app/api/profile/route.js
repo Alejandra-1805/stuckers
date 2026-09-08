@@ -3,7 +3,7 @@ import {db, jsonError, requireUser} from '../../../lib/server';
 export async function GET(request){
   const url=new URL(request.url); const username=(url.searchParams.get('username')||'').replace(/^@/,'');
   if(!username)return Response.json({error:'Username required'},{status:400});
-  const {data,error}=await db.from('profiles').select('id,username,display_name,avatar_url,bio,created_at,follows!follows_following_id_fkey(follower_id),following:follows!follows_follower_id_fkey(following_id),posts(id)').eq('username',username).maybeSingle();
+  const {data,error}=await db.from('profiles').select('id,username,display_name,avatar_url,bio,created_at,follows!follows_following_id_fkey(follower_id),following:follows!follows_follower_id_fkey(following_id),posts!posts_author_id_fkey(id)').eq('username',username).maybeSingle();
   if(error)return Response.json({error:error.message},{status:500});
   if(!data)return Response.json({error:'Profile not found'},{status:404});
   return Response.json(data);
@@ -13,6 +13,7 @@ export async function POST(request) {
   try {
     const id = await requireUser(request);
     const input = await request.json();
+    const {data:existing} = await db.from('profiles').select('id').eq('id',id).maybeSingle();
     const clean = String(input.username || '').replace(/^@/, '').replace(/[^a-zA-Z0-9_]/g, '').slice(0, 40);
     if (!clean) return Response.json({error:'A Twitter username is required'}, {status:400});
     const profile = {
@@ -24,6 +25,7 @@ export async function POST(request) {
     };
     const {data,error} = await db.from('profiles').upsert(profile, {onConflict:'id'}).select().single();
     if (error) throw error;
+    if (!existing) await db.from('notifications').insert({user_id:id,kind:'welcome'});
     return Response.json(data);
   } catch (error) { return jsonError(error); }
 }

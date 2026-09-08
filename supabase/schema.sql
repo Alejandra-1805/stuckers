@@ -58,7 +58,7 @@ create table if not exists public.notifications (
   user_id text not null references public.profiles(id) on delete cascade,
   actor_id text references public.profiles(id) on delete cascade,
   post_id uuid references public.posts(id) on delete cascade,
-  kind text not null check (kind in ('like','comment','follow','repost')),
+  kind text not null,
   read boolean default false,
   created_at timestamptz default now()
 );
@@ -78,3 +78,24 @@ alter table public.notifications enable row level security;
 grant usage on schema public to anon, authenticated;
 grant select on public.profiles, public.posts, public.comments, public.likes, public.bookmarks, public.follows to anon, authenticated;
 grant select on public.notifications to authenticated;
+
+alter table public.notifications drop constraint if exists notifications_kind_check;
+alter table public.notifications add constraint notifications_kind_check check (kind in ('welcome','like','comment','follow','repost'));
+drop policy if exists "Public profiles are readable" on public.profiles;
+create policy "Public profiles are readable" on public.profiles for select using (true);
+drop policy if exists "Public posts are readable" on public.posts;
+create policy "Public posts are readable" on public.posts for select using (true);
+drop policy if exists "Public comments are readable" on public.comments;
+create policy "Public comments are readable" on public.comments for select using (true);
+drop policy if exists "Public likes are readable" on public.likes;
+create policy "Public likes are readable" on public.likes for select using (true);
+drop policy if exists "Public follows are readable" on public.follows;
+create policy "Public follows are readable" on public.follows for select using (true);
+drop policy if exists "Public bookmarks are readable" on public.bookmarks;
+create policy "Public bookmarks are readable" on public.bookmarks for select using (true);
+
+insert into public.notifications (user_id, kind)
+select p.id, 'welcome' from public.profiles p
+where not exists (
+  select 1 from public.notifications n where n.user_id = p.id and n.kind = 'welcome'
+);
