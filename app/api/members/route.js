@@ -1,4 +1,12 @@
-import {normalizePrivyUser,privy} from '../../../lib/server';
+import {PrivyClient} from '@privy-io/node';
+
+const privy=new PrivyClient({appId:process.env.NEXT_PUBLIC_PRIVY_APP_ID||'build-placeholder',appSecret:process.env.PRIVY_APP_SECRET||'build-placeholder'});
+function normalizePrivyUser(user){
+  const accounts=user?.linked_accounts||user?.linkedAccounts||[];
+  const x=accounts.find(a=>a.type==='twitter_oauth'||a.type==='twitter');
+  if(!x?.username)return null;
+  return {id:user.id,twitter_id:String(x.subject||x.id||''),username:x.username,display_name:x.name||x.username,avatar_url:x.profilePictureUrl||x.profile_picture_url||null,bio:'Professional bagholder.',created_at:user.createdAt||new Date().toISOString(),followers_count:0,following_count:0,posts_count:0};
+}
 export async function GET(request){
   try{
     const q=(new URL(request.url).searchParams.get('q')||'').toLowerCase().replace(/^@/,'').slice(0,80);

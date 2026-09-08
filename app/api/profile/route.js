@@ -1,4 +1,13 @@
-import {db,getPrivyProfile,jsonError,normalizePrivyUser,privy,requireUser} from '../../../lib/server';
+import {PrivyClient} from '@privy-io/node';
+import {db,jsonError,requireUser} from '../../../lib/server';
+
+const privy=new PrivyClient({appId:process.env.NEXT_PUBLIC_PRIVY_APP_ID||'build-placeholder',appSecret:process.env.PRIVY_APP_SECRET||'build-placeholder'});
+function normalizePrivyUser(user){
+  const accounts=user?.linked_accounts||user?.linkedAccounts||[];
+  const x=accounts.find(a=>a.type==='twitter_oauth'||a.type==='twitter');
+  if(!x?.username)return null;
+  return {id:user.id,twitter_id:String(x.subject||x.id||''),username:x.username,display_name:x.name||x.username,avatar_url:x.profilePictureUrl||x.profile_picture_url||null,bio:'Professional bagholder.',created_at:user.createdAt||new Date().toISOString()};
+}
 
 async function stats(profile){
   try{
@@ -25,7 +34,7 @@ export async function GET(request){
 export async function POST(request){
   try{
     const id=await requireUser(request);
-    const profile=await getPrivyProfile(id);
+    const profile=normalizePrivyUser(await privy.users()._get(id));
     if(!profile)return Response.json({error:'Connect an X account first'},{status:400});
     const saved=await db.from('profiles').upsert(profile,{onConflict:'id'}).select().single();
     if(!saved.error){
