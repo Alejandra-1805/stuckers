@@ -1,6 +1,7 @@
 import './globals.css';
 import './upgrade.css';
 import './welcome.css';
+import './explore.css';
 import Providers from './providers';
 
 export const metadata = {

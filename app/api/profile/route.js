@@ -1,31 +1,37 @@
-import {db, jsonError, requireUser} from '../../../lib/server';
+import {db,getPrivyProfile,jsonError,normalizePrivyUser,privy,requireUser} from '../../../lib/server';
 
-export async function GET(request){
-  const url=new URL(request.url); const username=(url.searchParams.get('username')||'').replace(/^@/,'');
-  if(!username)return Response.json({error:'Username required'},{status:400});
-  const {data,error}=await db.from('profiles').select('id,username,display_name,avatar_url,bio,created_at,follows!follows_following_id_fkey(follower_id),following:follows!follows_follower_id_fkey(following_id),posts!posts_author_id_fkey(id)').eq('username',username).maybeSingle();
-  if(error)return Response.json({error:error.message},{status:500});
-  if(!data)return Response.json({error:'Profile not found'},{status:404});
-  return Response.json(data);
+async function stats(profile){
+  try{
+    const [followers,following,posts]=await Promise.all([
+      db.from('follows').select('*',{count:'exact',head:true}).eq('following_id',profile.id),
+      db.from('follows').select('*',{count:'exact',head:true}).eq('follower_id',profile.id),
+      db.from('posts').select('*',{count:'exact',head:true}).eq('author_id',profile.id)
+    ]);
+    return {...profile,followers_count:followers.count||0,following_count:following.count||0,posts_count:posts.count||0};
+  }catch{return {...profile,followers_count:0,following_count:0,posts_count:0}}
 }
 
-export async function POST(request) {
-  try {
-    const id = await requireUser(request);
-    const input = await request.json();
-    const {data:existing} = await db.from('profiles').select('id').eq('id',id).maybeSingle();
-    const clean = String(input.username || '').replace(/^@/, '').replace(/[^a-zA-Z0-9_]/g, '').slice(0, 40);
-    if (!clean) return Response.json({error:'A Twitter username is required'}, {status:400});
-    const profile = {
-      id,
-      twitter_id: input.twitterId ? String(input.twitterId) : null,
-      username: clean,
-      display_name: String(input.displayName || clean).slice(0, 80),
-      avatar_url: input.avatarUrl ? String(input.avatarUrl).slice(0, 500) : null
-    };
-    const {data,error} = await db.from('profiles').upsert(profile, {onConflict:'id'}).select().single();
-    if (error) throw error;
-    if (!existing) await db.from('notifications').insert({user_id:id,kind:'welcome'});
-    return Response.json(data);
-  } catch (error) { return jsonError(error); }
+export async function GET(request){
+  try{
+    const username=(new URL(request.url).searchParams.get('username')||'').replace(/^@/,'');
+    if(!username)return Response.json({error:'Username required'},{status:400});
+    const user=await privy.users().getByTwitterUsername({username});
+    const profile=normalizePrivyUser(user);
+    if(!profile)return Response.json({error:'Profile not found'},{status:404});
+    return Response.json(await stats(profile));
+  }catch(error){return Response.json({error:error?.message||'Profile not found'},{status:404})}
+}
+
+export async function POST(request){
+  try{
+    const id=await requireUser(request);
+    const profile=await getPrivyProfile(id);
+    if(!profile)return Response.json({error:'Connect an X account first'},{status:400});
+    const saved=await db.from('profiles').upsert(profile,{onConflict:'id'}).select().single();
+    if(!saved.error){
+      const {data:welcome}=await db.from('notifications').select('id').eq('user_id',id).eq('kind','welcome').maybeSingle();
+      if(!welcome)await db.from('notifications').insert({user_id:id,kind:'welcome'});
+    }
+    return Response.json(await stats(profile));
+  }catch(error){return jsonError(error)}
 }
