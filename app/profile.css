@@ -1,0 +1,22 @@
+.profileInfo .joined {
+  display: block;
+  color: var(--muted);
+  margin: 14px 0;
+  font-size: 14px;
+}
+
+.profileTabs {
+  display: grid;
+  grid-template-columns: 1fr;
+  border-bottom: 1px solid var(--line);
+  padding: 0 18px;
+}
+
+.profileTabs button {
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  padding: 16px;
+  font-weight: 850;
+  border-bottom: 3px solid var(--green);
+}

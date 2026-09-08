@@ -10,7 +10,7 @@ export default function Providers({children}) {
         appearance: {
           theme: 'dark',
           accentColor: '#ff8a00',
-          logo: '/stuckers-logo.png',
+          logo: 'https://www.stuckersonrh.fun/stuckers-logo.png',
           showWalletLoginFirst: false
         },
         embeddedWallets: {createOnLogin: 'off'}
