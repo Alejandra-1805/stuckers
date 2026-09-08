@@ -1,0 +1,3 @@
+import {db,jsonError,requireUser} from '../../../lib/server';
+export async function GET(request){try{const userId=await requireUser(request);const {data,error}=await db.from('notifications').select('id,kind,read,created_at,post_id,profiles!notifications_actor_id_fkey(id,username,display_name,avatar_url)').eq('user_id',userId).order('created_at',{ascending:false}).limit(60);if(error)throw error;return Response.json(data||[])}catch(e){return jsonError(e)}}
+export async function POST(request){try{const userId=await requireUser(request);const {error}=await db.from('notifications').update({read:true}).eq('user_id',userId);if(error)throw error;return Response.json({ok:true})}catch(e){return jsonError(e)}}

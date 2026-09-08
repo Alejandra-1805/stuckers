@@ -15,8 +15,13 @@ create table if not exists public.posts (
   author_id text not null references public.profiles(id) on delete cascade,
   content text not null check (char_length(content) between 1 and 500),
   category text default 'STUCKERS',
+  image_url text,
+  repost_of uuid references public.posts(id) on delete set null,
   created_at timestamptz default now()
 );
+
+alter table public.posts add column if not exists image_url text;
+alter table public.posts add column if not exists repost_of uuid references public.posts(id) on delete set null;
 
 create table if not exists public.comments (
   id uuid primary key default gen_random_uuid(),
@@ -48,12 +53,28 @@ create table if not exists public.follows (
   check (follower_id <> following_id)
 );
 
+create table if not exists public.notifications (
+  id uuid primary key default gen_random_uuid(),
+  user_id text not null references public.profiles(id) on delete cascade,
+  actor_id text references public.profiles(id) on delete cascade,
+  post_id uuid references public.posts(id) on delete cascade,
+  kind text not null check (kind in ('like','comment','follow','repost')),
+  read boolean default false,
+  created_at timestamptz default now()
+);
+
+insert into storage.buckets (id, name, public)
+values ('post-images', 'post-images', true)
+on conflict (id) do update set public = true;
+
 alter table public.profiles enable row level security;
 alter table public.posts enable row level security;
 alter table public.comments enable row level security;
 alter table public.likes enable row level security;
 alter table public.bookmarks enable row level security;
 alter table public.follows enable row level security;
+alter table public.notifications enable row level security;
 
 grant usage on schema public to anon, authenticated;
 grant select on public.profiles, public.posts, public.comments, public.likes, public.bookmarks, public.follows to anon, authenticated;
+grant select on public.notifications to authenticated;

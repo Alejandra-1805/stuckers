@@ -1,5 +1,14 @@
 import {db, jsonError, requireUser} from '../../../lib/server';
 
+export async function GET(request){
+  const url=new URL(request.url); const username=(url.searchParams.get('username')||'').replace(/^@/,'');
+  if(!username)return Response.json({error:'Username required'},{status:400});
+  const {data,error}=await db.from('profiles').select('id,username,display_name,avatar_url,bio,created_at,follows!follows_following_id_fkey(follower_id),following:follows!follows_follower_id_fkey(following_id),posts(id)').eq('username',username).maybeSingle();
+  if(error)return Response.json({error:error.message},{status:500});
+  if(!data)return Response.json({error:'Profile not found'},{status:404});
+  return Response.json(data);
+}
+
 export async function POST(request) {
   try {
     const id = await requireUser(request);

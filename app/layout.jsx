@@ -1,4 +1,5 @@
 import './globals.css';
+import './upgrade.css';
 import Providers from './providers';
 
 export const metadata = {
